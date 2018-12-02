@@ -1,0 +1,223 @@
+---
+title: "Lab 1+ Solution"
+author: "Kun Zhang"
+date: "3 December 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Smoking Data
+```{r initialize}
+smoke.data <- read.csv("./Data/Smoking/smoke_data.csv", head=TRUE, sep=",", na.strings=" ") #na.strings = " " blank
+smoke.trend.1 <- ddply(smoke.data, .(wave, parsmk), summarise, smoke=mean(smkreg)) 
+
+```
+
+# ggplot Example
+```{r }
+
+names(smoke.trend.1)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+library(dplyr)
+
+issues = c(quo(us.data$fracking), quo(us.data$subsidise.renewables),
+quo(us.data$fewer.migrants), quo(us.data$tariffs),
+quo(us.data$tax.cuts.for.bus), quo(us.data$rich.poor.diffs),
+quo(us.data$spend.more.infrastructure))
+
+issues
+
+#<quosure> is referenced as [[]]
+us.issue.attitudes <- data.frame(matrix(nrow = 7, ncol = 1))
+
+
+for(i in 1:7){
+  us.issue.attitudes[i,] <- us.data %>%
+  dplyr::group_by(!!issues[[i]]) %>%  # !! takes a single expression, evaluates it, and inlines the result 
+  dplyr::summarise(sum.val = sum(weights)) %>%
+  mutate(proportion = (sum.val / sum(sum.val)) * 100) %>%
+  dplyr::select(-sum.val) %>%
+  na.omit() %>%
+  rename("response"= names(.)[1]) %>%
+  subset(., response == "Strongly agree" | response == "Agree") %>%
+  summarise(proportion = sum(proportion)) %>%
+  dplyr::select(proportion)
+}
+
+us.issue.attitudes
+us.issue.attitudes <- us.issue.attitudes %>%
+rename("All voters"= names(.)[1]) %>%
+mutate(issues = c("Permit more fracking",
+"Subsidies for renewable energy sources",
+"America should accept fewer immigrants",
+"Tariffs on imports from China will help the economy",
+"Tax cuts for businesses help grow the economy",
+"Differences between rich and poor have become too large",
+"Instead of cutting taxes, government should spend more on infrastructure"))
+
+us.issue.attitudes
+```
+
+```{r key issues 2}
+
+library(dplyr)
+
+issues = c(quo(us.data$fracking), quo(us.data$subsidise.renewables),
+quo(us.data$fewer.migrants), quo(us.data$tariffs),
+quo(us.data$tax.cuts.for.bus), quo(us.data$rich.poor.diffs),
+quo(us.data$spend.more.infrastructure))
+
+us.issue.attitudes <- data.frame(matrix(nrow = 7, ncol = 1))
+for(i in 1:7){
+  us.issue.attitudes[i,] <- us.data %>%
+  dplyr::group_by(!!issues[[i]]) %>%  # !! takes a single expression, evaluates it, and inlines the result 
+  dplyr::summarise(sum.val = sum(weights)) %>%
+  mutate(proportion = (sum.val / sum(sum.val)) * 100) %>%
+  dplyr::select(-sum.val) %>%
+  na.omit() %>%
+  rename("response"= names(.)[1]) %>%
+  subset(., response == "Strongly agree" | response == "Agree") %>%
+  summarise(proportion = sum(proportion)) %>%
+  dplyr::select(proportion)
+}
+
+us.issue.attitudes
+us.issue.attitudes <- us.issue.attitudes %>%
+rename("All voters"= names(.)[1]) %>%
+mutate(issues = c("Permit more fracking",
+"Subsidies for renewable energy sources",
+"America should accept fewer immigrants",
+"Tariffs on imports from China will help the economy",
+"Tax cuts for businesses help grow the economy",
+"Differences between rich and poor have become too large",
+"Instead of cutting taxes, government should spend more on infrastructure"))
+
+#<quosure> is referenced as [[]]
+us.issue.attitudes.vote <- data.frame(matrix(nrow = 2, ncol = 7))
+
+for(i in 1:7){
+  us.issue.attitudes.vote[,i] <- us.data %>%
+  dplyr::group_by(vote, !!issues[[i]]) %>%    # !! takes a single expression, evaluates it, and inlines the result 
+  dplyr::summarise(sum.val = sum(weights)) %>%
+  dplyr::group_by(vote) %>% 
+  mutate(proportion = (sum.val / sum(sum.val)) * 100) %>%
+  dplyr::select(-sum.val) %>%
+  na.omit() %>%
+  rename("response"= names(.)[2]) %>%
+  subset(c(response == "Strongly agree" | response == "Agree") & c(vote=="Republican"|vote=="Democratic")) %>%
+  summarise(proportion = sum(proportion)) %>%
+  dplyr::select(proportion)
+}
+
+
+
+us.issue.attitudes.vote
+
+
+us.issue.attitudes.vote.tabs <- merge(us.issue.attitudes,
+data.frame(t(us.issue.attitudes.vote)) %>%
+setNames(c("Democratic", "Republican")) %>%
+mutate(issues = c("Permit more fracking",
+"Subsidies for renewable energy sources",
+"America should accept fewer immigrants",
+"Tariffs on imports from China will help the economy",
+"Tax cuts for businesses help grow the economy",
+"Differences between rich and poor have become too large",
+"Instead of cutting taxes, government should spend more on infrastructure")),by ="issues")
+
+print(us.issue.attitudes.vote.tabs)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+```{r dow anlaysis}
+library(plyr)
+library(ggplot2)
+library(scales)
+library(reshape2)
+
+dow.data <- read.csv("Data/Dow/Dow30.csv")
+
+
+names(dow.data)[2:31] <- c("Apple","American Express","Boeing","Caterpillar",
+                           "Cisco","Chevron","Coca-Cola","DowDuPont",
+                           "Exxon Mobil","General Electric", "Goldman Sachs",
+                           "Home Depot Inc","IBM","Intel","Johnson & Johnson",
+                           "JPMorgan Chase","McDonalds","3M Company","Merck",
+                           "Microsoft Corporation","Nike","Pfizer",
+                           "Procter & Gamble","Travelers Companies Inc",
+                           "UnitedHealth","United Technologies","Visa","Verizon",
+                           "Wal-Mart","Walt Disney")
+
+dow.data
+
+dow.data.2 <- melt(dow.data, id.vars = "Date", 
+                   measure.vars = c("Apple", "American Express", "Boeing", 
+                                    "Caterpillar", "Cisco", "Chevron"))
+dow.data.2
+
+dow.data.2$Date.2 <- as.Date(dow.data.2$Date, "%d/%m/%y")
+
+ggplot(dow.data.2, aes(x = Date.2, y = value, colour=variable)) +
+geom_line(alpha=.6, size=1) +
+labs(title = "Value of Dow30",
+y = "Value of stocks",
+x = "Date") +
+scale_y_continuous(labels = dollar) +
+scale_x_date(labels = date_format("%b-%Y"), breaks=pretty_breaks(3)) +
+theme_bw() +
+theme(axis.text = element_text(size=10),
+plot.title = element_text(size=10, face="bold", hjust=.5))
+
+# ggplot(dow.data.2, aes(x = Date.2, y = value, colour=variable)) +
+# geom_line(alpha=.6, size=1) +
+# labs(title = "Value of Dow30",
+# y = "Value of stocks\n",
+# x = "\nDate") +
+# scale_y_continuous(labels = dollar) +
+# scale_x_date(labels = date_format("%b-%Y"), breaks=pretty_breaks(3)) +
+# theme_bw() +
+# theme(axis.text = element_text(size=10),
+# plot.title = element_text(size=10, face="bold", hjust=.5),
+# legend.position = "none") +
+# facet_wrap( ~ variable)
+
+
+
+
+
+```
+
+
+
+
+
