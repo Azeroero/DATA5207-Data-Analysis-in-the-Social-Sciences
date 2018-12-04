@@ -1,0 +1,22 @@
+---
+title: "Lab 1+ Solution Part3"
+author: "Kun Zhang"
+date: "5 December 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Smoking Data Reshaping
+```{r initialize}
+library(plyr)
+smoke.data <- read.csv("./Data/Smoking/smoke_data.csv", head=TRUE, sep=",", na.strings=" ") #na.strings = " " blank
+
+```
+
+
+
+
+

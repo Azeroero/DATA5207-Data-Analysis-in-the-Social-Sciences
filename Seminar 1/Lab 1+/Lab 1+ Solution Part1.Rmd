@@ -1,7 +1,7 @@
 ---
-title: "Lab 1+ Solution"
+title: "Lab 1+ Solution Part1"
 author: "Kun Zhang"
-date: "3 December 2018"
+date: "5 December 2018"
 output: html_document
 ---
 
@@ -9,12 +9,10 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-
 # Smoking Data
 ```{r initialize}
 library(plyr)
 smoke.data <- read.csv("./Data/Smoking/smoke_data.csv", head=TRUE, sep=",", na.strings=" ") #na.strings = " " blank
-
 
 ```
 
@@ -92,6 +90,45 @@ ggplot(smoke.trend.3, aes(x = wave, y = smokes, group=parents)) +
 
 
 ```
+
+## Percentage of adolescents who report smoking by gender and parents smoking status
+```{r Percentage of adolescents who report smoking by gender and parents smoking status}
+smoke.trend.4 <- ddply(smoke.data, .(wave, parsmk, sex.1.F.), summarise,
+      smokes=CI(smkreg , ci = 0.95)[2],
+      upper.ci=CI(smkreg , ci = 0.95)[1],
+      lower.ci=CI(smkreg , ci = 0.95)[3])
+
+smoke.trend.4$parents <- as.factor(smoke.trend.4$parsmk)
+levels(smoke.trend.4$parents) <- c("Non-smokers", "Smokers") 
+smoke.trend.4$gender <- as.factor(smoke.trend.4$sex.1.F.)
+levels(smoke.trend.4$gender) <- c("Male", "Female") 
+
+print(smoke.trend.4)
+
+smoke.graph.1 <- ggplot(smoke.trend.4, aes(x = wave, y = smokes)) +
+  geom_line(alpha=.6, size=1) +
+  geom_ribbon(aes(ymin = lower.ci, ymax = upper.ci), alpha = .1) + #add confidence intervals
+  labs(title = "Percentage of adolescents who report smoking\n by parents smoking status",
+       x = "survey wave",
+       y = "Proportion of smokers") +
+  scale_x_continuous(breaks = c(2,3,4,5), limits=c(1,6)) +
+  scale_y_continuous(labels = percent, limits=c(0,.36),breaks=c(.05,.15, .25)) +
+  theme_bw() +
+  theme(panel.grid.minor = element_blank(), 
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(colour="grey", size=0.4 , linetype = "dashed"),
+        axis.text = element_text(size=10),
+        plot.title = element_text(size=10, face="bold", hjust=.5),
+        legend.position = "none")+
+  facet_wrap(parents~ gender, scales = "free") #using free/automatic scale for different graphs
+
+# Save Graph
+pdf(file="./ smoke.graph.1.pdf", width=8, height=5)
+print(smoke.graph.1)
+aux <- dev.off()
+
+```
+
 
 
 
