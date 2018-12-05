@@ -89,7 +89,7 @@ library(car)
 library(arm)
 
 
-survey.data <- read.csv("Data/Public opinion - Australia/survey.data_messed_up.csv")
+survey.data <- read.csv("Data/survey.data_messed_up.csv")
   #names(survey.data)
 
 #Education 
