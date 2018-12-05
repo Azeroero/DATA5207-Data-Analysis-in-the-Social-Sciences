@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-
+# Survey Data
 ```{r load library}
 library(foreign)
 library(plyr)
@@ -20,7 +20,7 @@ library(arm)
 library(reshape2)
 ```
 
-
+# Transform data
 ```{r transform data}
 survey.data <- read.csv("./Data/survey.data_messed_up.csv")
 survey.data$Education_all <- recode(survey.data$Education_all, "'Did not finish highschool' = 'Some schooling';  
@@ -58,29 +58,20 @@ survey.data$vote.major <- as.numeric(as.character(recode(survey.data$Vote_allpar
                                                          'Labor' = 0;
                                                          c('Call to Au','Democrats','DLP','Greens','Grey Power','One Nation', 'Other') = NA"
 )))
-
-fit.vote.major.1 <- glm(vote.major ~ z.income + Gender + education + Birthplace,
-                        family=binomial(link="logit"),  data=survey.data)
-
-display(fit.vote.major.1)
-
-
 ```
 
-```{r construct model}
-fit.vote.major.1 <- glm(vote.major ~ z.income + Gender + education + Birthplace,
-                        family=binomial(link="logit"),  data=survey.data)
+## Logistic Regression
+```{r Logistic Regression}
+# fit.vote.major.1 <- glm(vote.major ~ z.income + Gender + education + Birthplace,
+#                         family=binomial(link="logit"),  data=survey.data)
+# 
+# display(fit.vote.major.1)
 
-display(fit.vote.major.1)
-
+# Store model coefficients
 fit.vote.major.1993 <- glm(vote.major ~ z.income  + Gender + education + Birthplace,
                            family=binomial(link="logit"), 
                            subset=Year==1993,  
                            data=survey.data) 
-display(fit.vote.major.1993)
-
-
-
 fit.vote.major.1996 <- glm(vote.major ~ z.income + z.age + Birthplace + Education_all + Urban, 
                            family = binomial(link="logit"), subset=Year==1996, data = survey.data)
 fit.vote.major.1998 <- glm(vote.major ~ z.income + z.age + Birthplace + Education_all + Urban, 
@@ -94,6 +85,7 @@ fit.vote.major.2007 <- glm(vote.major ~ z.income + z.age + Birthplace + Educatio
 fit.vote.major.2010 <- glm(vote.major ~ z.income + z.age + Birthplace + Education_all + Urban, 
                            family = binomial(link="logit"), subset=Year==2010, data = survey.data)
 display(fit.vote.major.1993)
+
 fit.vote.major.coefs <- data.frame(rbind(summary(fit.vote.major.1993)$coefficients[,1],
                                          summary(fit.vote.major.1996)$coefficients[,1],
                                          summary(fit.vote.major.1998)$coefficients[,1],
@@ -143,7 +135,9 @@ ggplot(fit.vote.major.coefs, aes(year, value)) +
   facet_wrap( ~ variable, nrow=2)
 ```
 
-```{r detailed analysis}
+## Model Performance Analysis
+In 1996 and 2004, the logistic models only outperform null model by less than 1%.
+```{r Model Performance Analysis}
 library(pscl)
 hitmiss(fit.vote.major.1993)  
 fit.vote.major.hit <- data.frame(rbind(hitmiss(fit.vote.major.1993)[1], 
@@ -154,13 +148,14 @@ fit.vote.major.hit <- data.frame(rbind(hitmiss(fit.vote.major.1993)[1],
                                        hitmiss(fit.vote.major.2007)[1],
                                        hitmiss(fit.vote.major.2010)[1]))
 print(fit.vote.major.hit)
-
 names(fit.vote.major.hit)[1] <- "predicted"
-fit.vote.major.hit$null <- c(50.12,58.72,51.88,55.37,57.83,51.1,50.99)
-fit.vote.major.hit$pred.minus.null <- fit.vote.major.hit$predicted - 
-  fit.vote.major.hit$null
+
+
+fit.vote.major.hit$null <- c(50.12,58.72,51.88,55.37,57.83,51.1,50.99) # manually add null model
+fit.vote.major.hit$pred.minus.null <- fit.vote.major.hit$predicted - fit.vote.major.hit$null
 fit.vote.major.hit <- fit.vote.major.hit[c("predicted","pred.minus.null")]
 fit.vote.major.hit$year <- as.numeric(c(1993,1996,1998,2001,2004,2007,2010))
+
 
 fit.vote.major.hit <- melt(fit.vote.major.hit, id.vars="year") 
 levels(fit.vote.major.hit$variable) <- c("Correctly predicted", "Compared to null model")
@@ -182,7 +177,11 @@ ggplot(fit.vote.major.hit, aes(year, value)) +
         axis.text.x = element_text(size=10, vjust=-.25), 
         axis.text.y = element_text(size=10, hjust=1)) +
   facet_wrap( ~ variable, nrow=1) 
+```
 
+## Using logistic regression to predict probabilities
+```{r Using logistic regression to predict probabilities}
+# invlogit(linear formula with logit coefficents) evalualtes probabilities 
 invlogit(summary(fit.vote.major.1993)$coefficients[1,1] +
            (summary(fit.vote.major.1993)$coefficients[2,1] *  c(-.5,0,.5)))
 income.slope.1993 <- data.frame(
@@ -191,45 +190,67 @@ income.slope.1993 <- data.frame(
 names(income.slope.1993)[1] <- "vote.major"
 income.slope.1993$year <- "1993"
 
-
+# Get prediction points for all years
 library(dplyr)
-income.slope.1993 <- data.frame(invlogit(summary(fit.vote.major.1993)$coefficients[1,1] + (summary(fit.vote.major.1993)$coefficients[2,1] *  c(-.5,0,.5))))
+income.slope.1993 <- data.frame(invlogit(summary(fit.vote.major.1993)$coefficients[1,1] +
+                                           (summary(fit.vote.major.1993)$coefficients[2,1] *  c(-.5,0,.5))))
 names(income.slope.1993)[1] <- "vote.major"
 income.slope.1993$Year <- "1993" 
-income.slope.1996 <- data.frame(invlogit(summary(fit.vote.major.1996)$coefficients[1,1] + (summary(fit.vote.major.1996)$coefficients[2,1] *  c(-.5,0,.5))))
+
+income.slope.1996 <- data.frame(invlogit(summary(fit.vote.major.1996)$coefficients[1,1] +
+                                           (summary(fit.vote.major.1996)$coefficients[2,1] *  c(-.5,0,.5))))
 names(income.slope.1996)[1] <- "vote.major"
 income.slope.1996$Year <- "1996" 
-income.slope.1998 <- data.frame(invlogit(summary(fit.vote.major.1998)$coefficients[1,1] + (summary(fit.vote.major.1998)$coefficients[2,1] *  c(-.5,0,.5))))
+
+income.slope.1998 <- data.frame(invlogit(summary(fit.vote.major.1998)$coefficients[1,1] +
+                                           (summary(fit.vote.major.1998)$coefficients[2,1] *  c(-.5,0,.5))))
 names(income.slope.1998)[1] <- "vote.major"
 income.slope.1998$Year <- "1998" 
-income.slope.2001 <- data.frame(invlogit(summary(fit.vote.major.2001)$coefficients[1,1] + (summary(fit.vote.major.2001)$coefficients[2,1] *  c(-.5,0,.5))))
+
+income.slope.2001 <- data.frame(invlogit(summary(fit.vote.major.2001)$coefficients[1,1] +
+                                           (summary(fit.vote.major.2001)$coefficients[2,1] *  c(-.5,0,.5))))
 names(income.slope.2001)[1] <- "vote.major"
 income.slope.2001$Year <- "2001" 
-income.slope.2004 <- data.frame(invlogit(summary(fit.vote.major.2004)$coefficients[1,1] + (summary(fit.vote.major.2004)$coefficients[2,1] *  c(-.5,0,.5))))
+income.slope.2004 <- data.frame(invlogit(summary(fit.vote.major.2004)$coefficients[1,1] +
+                                           (summary(fit.vote.major.2004)$coefficients[2,1] *  c(-.5,0,.5))))
 names(income.slope.2004)[1] <- "vote.major"
 income.slope.2004$Year <- "2004" 
-income.slope.2007 <- data.frame(invlogit(summary(fit.vote.major.2007)$coefficients[1,1] + (summary(fit.vote.major.2007)$coefficients[2,1] *  c(-.5,0,.5))))
+
+income.slope.2007 <- data.frame(invlogit(summary(fit.vote.major.2007)$coefficients[1,1] +
+                                           (summary(fit.vote.major.2007)$coefficients[2,1] *  c(-.5,0,.5))))
 names(income.slope.2007)[1] <- "vote.major"
 income.slope.2007$Year <- "2007" 
-income.slope.2010 <- data.frame(invlogit(summary(fit.vote.major.2010)$coefficients[1,1] + (summary(fit.vote.major.2010)$coefficients[2,1] *  c(-.5,0,.5))))
+
+income.slope.2010 <- data.frame(invlogit(summary(fit.vote.major.2010)$coefficients[1,1] +
+                                           (summary(fit.vote.major.2010)$coefficients[2,1] *  c(-.5,0,.5))))
 names(income.slope.2010)[1] <- "vote.major"
 income.slope.2010$Year <- "2010" 
 
-income.slope <-  rbind(income.slope.1993, income.slope.1996, income.slope.1998, income.slope.2001, income.slope.2004, income.slope.2007, income.slope.2010)
+income.slope <-  rbind(income.slope.1993, income.slope.1996, income.slope.1998, income.slope.2001,
+                       income.slope.2004, income.slope.2007, income.slope.2010)
 
-income.slope$income.quintiles <- ((c(-.5,0,.5) * 2) * sd(survey.data$income_percentile, na.rm=TRUE)) + mean(survey.data$income_percentile, na.rm=TRUE)
 
+# rescale standardized (-.5,0,.5) back to percentile
+income.slope$income.quintiles <- ((c(-.5,0,.5) * 2) * sd(survey.data$income_percentile, na.rm=TRUE)) +
+  mean(survey.data$income_percentile, na.rm=TRUE)
+
+# length of data for each (income.quintiles, Year)
+income.fit.vote.major.n <- na.omit(ddply(survey.data, .(income.quintiles, Year), summarise,
+                                         n = length(vote.major)))
+# average for each (income.quintiles, Year)
 income.fit.vote.major.average <- na.omit(ddply(survey.data, .(income.quintiles, Year), summarise,
                                                vote.major = mean(vote.major, na.rm=TRUE)))
 
-income.fit.vote.major.n <- na.omit(ddply(survey.data, .(income.quintiles, Year), summarise,
-                                         n = length(vote.major)))
-
 income.fit.vote.major.average <- left_join(income.fit.vote.major.average, income.fit.vote.major.n)
 
-income.fit.vote.major.average$income.quintiles <- as.numeric(as.character(income.fit.vote.major.average$income.quintiles))
+income.fit.vote.major.average$income.quintiles <-
+  as.numeric(as.character(income.fit.vote.major.average$income.quintiles))
 
-income.fit.vote.major.average$Year <- ifelse(income.fit.vote.major.average$Year == "1967",NA, income.fit.vote.major.average$Year)
+# set 1967 to NA; 1967 had income percentile/quintile and is not in the scope of this analysis
+income.fit.vote.major.average$Year <- ifelse(income.fit.vote.major.average$Year == "1967",
+                                             NA, 
+                                             income.fit.vote.major.average$Year)
+
 
 ggplot(subset(income.fit.vote.major.average, !is.na(Year)), aes(income.quintiles, vote.major, size=n)) +
   geom_point(alpha=1, shape=1) +   
