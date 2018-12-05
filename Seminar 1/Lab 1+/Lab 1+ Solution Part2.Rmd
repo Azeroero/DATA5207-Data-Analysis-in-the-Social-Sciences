@@ -13,6 +13,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r initialize}
 library(foreign)
 earnings.data <- read.dta("./Data/Earnings/earnings.dta") #load dta 
+
+
 ```
 
 ## Exampe: Data Processing using recode() and cut() 
