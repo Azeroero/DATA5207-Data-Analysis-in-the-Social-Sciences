@@ -1,5 +1,5 @@
 ---
-title: "R Notebook"
+title: "Lab 3-2 Solution"
 output: html_notebook
 ---
 
