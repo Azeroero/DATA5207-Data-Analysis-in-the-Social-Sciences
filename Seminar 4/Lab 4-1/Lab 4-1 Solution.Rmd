@@ -2,7 +2,9 @@
 title: "Lab 4-1 Solution"
 author: "Kun Zhang"
 date: "11 December 2018"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -25,9 +27,7 @@ crime.data <- read.csv("Data/NSW_Crime_data_clean.csv")
 
 ## Data Visualisation
 ```{r data visulisation}
-
 names(crime.data)
-
 hist(crime.data$Murder)
 hist(crime.data$Robbery.without.a.weapon)
 hist(crime.data$Break...Enter..Dwelling.)
@@ -86,21 +86,6 @@ ggplot(coef.linear.model.1, aes(x = coef.linear.model.1., y = vars)) +
 
 
 ## Model Explanation
-From the Residuals vs Leverage plot can see that we can see that most 
+From the Residuals vs Fitted plot can see that we can see that most data fit within the line with few exceptions being data on row 8 and 56. The Q-Q plot reveals that most data points fall within the 45-degree line, indicating that our error is normal. We can see the spread of the points on Scale-Location roughly in a consistent manner, showing that our model presents approximately homoscedastic errors. It can be observed that some of the cases have more influence on the model, but the affect is not significant. 
 
-: This type of plot helps us detect outliers in our data. There is no
-scientific definition of an outlier - it is a matter of judgment. If a point significantly influences model
-fit (has large leverage) and is not approximated well by the model (has a large residual) it could be
-considered an outlier.
-2) Q-Q Plot: One of the assumptions of the linear regression model is that our errors are normally
-distributed. If our data falls roughly in line with the 45 degree straight line, our errors are approximately
-normal.
-3) Scale-Location plot: This is also referred to as the Spread-Location plot. The plot demonstrates
-whether residuals have a consistent spread across the range of predictors. This is a measurement of
-homoscedasticity in the data. If you see a horizontal line with consistently spread points that is a sign
-that the model has approximately homoscedastic errors.
-4) Residuals vs Leverage: This plot helps us find influential cases in the data. The most impactful
-areas are at the top right and bottom right corner - these spots can heavily influence the regression
-line. If the cases are outside of the Cook's distance scores - they are highly influential to the regression
-results. That is, the regression results would be impacted if we were to remove those cases.
 
