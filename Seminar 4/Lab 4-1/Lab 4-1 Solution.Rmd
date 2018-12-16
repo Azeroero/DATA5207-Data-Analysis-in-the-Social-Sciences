@@ -86,6 +86,6 @@ ggplot(coef.linear.model.1, aes(x = coef.linear.model.1., y = vars)) +
 
 
 ## Model Explanation
-From the Residuals vs Fitted plot can see that we can see that most data fit within the line with few exceptions being data on row 8 and 56. The Q-Q plot reveals that most data points fall within the 45-degree line, indicating that our error is normal. We can see the spread of the points on Scale-Location roughly in a consistent manner, showing that our model presents approximately homoscedastic errors. It can be observed that some of the cases have more influence on the model, but the affect is not significant. 
+From the Residuals vs Fitted plot, we can see that most data fit within the line with few exceptions being data on row 8 and 56. The Q-Q plot reveals that most data points fall within the 45-degree line, indicating that our error is normal. We can see the spread of the points on Scale-Location roughly in a consistent manner, showing that our model presents approximately homoscedastic errors. It can be observed that some of the cases have more influence on the model, but the affect is not significant. 
 
 

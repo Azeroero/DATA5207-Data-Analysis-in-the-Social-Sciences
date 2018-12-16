@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r initialization}
 library(dplyr)
-wvs.dat <- read.csv("data/WVS/wvs.dat_clean.csv")
+wvs.dat <- read.csv("Data/WVS/wvs.dat_clean.csv")
 dim(wvs.dat)
 ```
 
@@ -145,17 +145,40 @@ y2 = wvs.dat$justified.bribery
 ```
 
 
-## Lasso
+## Lasso Regularization
 ```{r Lasso}
-library(glmnet)
+library(glmnet) # Lasso and Elastic-Net Regularized Generalized Linear Models
+# lasso fit model
 fit = glmnet(x,y)
-print(fit)
+#print(fit)
 plot(fit)
+# x-axis bottom: the sum of absolute values of regression coefficients (the size of the term that multiplies)
+# Larger values of the L1 norm mean more variables are in play
+# x axis top: the number of non-zero variables
+
+
+# cross validate
 cvfit = cv.glmnet(x,y)
 plot(cvfit)
 coef(cvfit, s = "lambda.min")
+(cvfit$lambda.1se)
+# predict() uses the coeffecient to evaluate predicted values 
+predict(cvfit, newx = x[1:7,], s = "lambda.min")
+```
+Five Varaibles: gender, Age.in.years, Children, trust.family, trust.acquaintances
+
+## Elastic net
+```{r elastic net}
+fit.elastic = glmnet(x, y, alpha=0.5)
+plot(fit.elastic)
+cvfit.elastic = cv.glmnet(x,y, alpha=0.5)
+plot(cvfit.elastic)
+coef(cvfit.elastic, s = "lambda.min")
+(cvfit.elastic$lambda.1se)
+predict(cvfit.elastic, newx = x[1:6,], s = "lambda.min")
 
 
 ```
-
+11 Variables
+lambda.1se for elatic net is smaller than that of pure lasso.
 
