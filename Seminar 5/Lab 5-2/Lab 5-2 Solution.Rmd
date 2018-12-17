@@ -70,7 +70,6 @@ ir.pca <- prcomp(na.omit(wvs.dat[,c("happiness",
                                     "finances", 
                                     "satisfaction",
                                     "freedom")])) 
-
 plot(ir.pca, type = "l") # variance latent variable ~ variance
 ```
 ## Factor Analysis Example
