@@ -24,7 +24,6 @@ dim(drugs.mort.data)
 names(poverty.data)[3]
 names(drugs.mort.data)[2]
 
-
 ```
 
 
@@ -52,11 +51,9 @@ head(county.data)
 county.data <- county.data %>%
   mutate(mortality.rate = ifelse(mortality.rate == "Unreliable", NA, mortality.rate) %>%
            as.numeric(as.character(mortality.rate)))
-
-
 ```
 
-```{r Correlation plots}
+```{r Correlation plots, warning=FALSE, fig.height=10, fig.width=10}
 library(ggplot2)
 library(scales)
 
@@ -150,5 +147,14 @@ mortality.model.2.intercepts <- cbind(ranef(mortality.model.2)$state, se.ranef(m
 # Interactive Map
 ```{r Interactive Map}
 library(rgdal)
-us.shape.1 <- readOGR(".","cb_2016_us_county_20m")
+us.shape.1 <- readOGR("./Data/US shapefiles","cb_2016_us_county_20m")
 us.shape.2 <- spTransform(us.shape.1, CRS("+init=epsg:4326"))
+
+
+```
+
+
+
+
+
+
