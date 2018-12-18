@@ -11,43 +11,179 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-```
-
-```{r data extraction}
-# 2016 Census Data
-setwd("./Data/NSW_LGA_2016/2016\ Census\ GCP\ Local\ GovernmentAreas\ for\ NSW")
-
-
-
-census_data_labels <- read.csv("./Data/NSW_LGA_2016/labels.csv", header=TRUE, sep=',', na.strings="")
-census_data <- read.csv("./Data/NSW_LGA_2016/NSW_LGA.csv", header=TRUE, sep=',', na.strings="")
-length(census_data_labels$Long)
-length(names(census_data))
-
-
-
-
-
-
-tail(census_data)
-names(census_data)
-
-head(labels)
-
-#Merge data and labels based on LGA id
-census_data <- merge(dv, census_data_labels, by="region_id")
-write.csv(data.merge, 'RData.data.merge.csv')
-
-
+library(plyr)
+library(dplyr)
 library(xlsx)
-a <- read.xlsx("./Data/BOSCAR_LGA/AlburyLGA.xlsx", sheetName = "Victims")
-
-
-labels <- read.csv("labels.csv", header=TRUE, sep=',', na.strings="")
-labels_data <- read.csv("NSW_LGA.csv", header=TRUE, sep=',', na.strings="")
-data.merge <- merge(dv, labels_data, by="region_id")
-write.csv(data.merge, 'RData.data.merge.csv')
+library(stringr)
+library(ggplot2)
+library(reshape2)
 ```
+
+# Data Transformation
+```{r Data Transformation: 2016 Census Data}
+#load and combine Census data
+filenames <- dir(path = "./Data/NSW_LGA_2016/2016 Census GCP Local Government Areas for NSW", 
+                 pattern = "csv", 
+                 full.names = TRUE, 
+                 recursive = TRUE)
+census_data_list <- lapply(as.list(filenames), read.csv)
+census_data <- join_all(census_data_list,"LGA_CODE_2016") #join all data by LGA_CODE
+census_data <- census_data[!duplicated(as.list(census_data))] #remove duplicated columns
+
+
+#load geo description data
+meta_geo <- read.xlsx("./Data/NSW_LGA_2016/Metadata/2016Census_geog_desc_1st_and_2nd_release.xlsx",
+                      "2016_ASGS_Non-ABS_Structures")
+
+
+#merge census data with geo data
+census_geo_data <- merge(
+              meta_geo %>%
+                dplyr::select(c("Census_Code_2016", "Census_Name_2016", "Area.sqkm")),   
+              census_data %>%
+                dplyr::mutate(Census_Code_2016 = as.factor(LGA_CODE_2016)),
+              by="Census_Code_2016")
+
+
+#remove "(A)", "(C)" in Census_Name_2016 and save into lga_name
+for(i in 1:length(census_geo_data$Census_Code_2016)){
+  census_geo_data$lga_name[i] <- str_trim(str_extract(
+    as.character(census_geo_data$Census_Name_2016[i]),"^[^\\(]*"))
+}
+
+write.csv(census_geo_data, file="./Data/census_geo_data.csv")
+```
+
+
+```{r Data Transformation: BOSCAR 2016}
+#load and combine crime data (BOSCAR)
+filenames <- dir(path = "./Data/BOSCAR_LGA", 
+                 pattern = "xlsx", 
+                 full.names = TRUE, 
+                 recursive = TRUE)
+
+# initializing data frame
+dv_data = data.frame(matrix(ncol = 4, nrow = length(boscar_data_list)))
+names(dv_data) = c("male.victim", "female.victim", "male.offender", "female.offender")
+
+# get numbers of victims by gender
+boscar_data_list <- lapply(as.list(filenames), 
+                           function(x) read.xlsx(x, sheetIndex = 3))
+
+
+
+for(i in 1:length(boscar_data_list)){
+  # assign "na" to 2.5; "na" in the dataset is a value between [1, 4] that cannot be revealed
+  # to the public due to privacy and legal issues; so we take the mean 2.5
+  levels(boscar_data_list[[i]][,3]) = c(levels(boscar_data_list[[i]][,3]), 2.5)
+  boscar_data_list[[i]][,3][boscar_data_list[[i]][,3] == "na"] <- 2.5
+   
+  
+  # manually sum all age group as Total number in the dataset contain "nc" values; and round up
+  dv_data$male.victim[i] <- ceiling(sum(as.numeric(as.character(boscar_data_list[[i]][5,3])),
+                                        as.numeric(as.character(boscar_data_list[[i]][6,3])),
+                                        as.numeric(as.character(boscar_data_list[[i]][7,3])),
+                                        as.numeric(as.character(boscar_data_list[[i]][8,3])),
+                                        as.numeric(as.character(boscar_data_list[[i]][9,3])))) 
+  
+  dv_data$female.victim[i] <- ceiling(sum(as.numeric(as.character(boscar_data_list[[i]][11,3])),
+                                        as.numeric(as.character(boscar_data_list[[i]][12,3])),
+                                        as.numeric(as.character(boscar_data_list[[i]][13,3])),
+                                        as.numeric(as.character(boscar_data_list[[i]][14,3])),
+                                        as.numeric(as.character(boscar_data_list[[i]][15,3]))))   
+  
+  # only retrieve LGA name and store into lga_name
+  dv_data$lga_name[i] <- str_sub(str_trim(str_extract(as.character(boscar_data_list[[i]][3,1]),
+                                                      "^(?<string>.*)Local")),1,-7)
+}
+
+
+# get numbers of offenders by gender; there is no "na" value for offenders
+boscar_data_list <- lapply(as.list(filenames), 
+                           function(x) read.xlsx(x, sheetIndex = 4))
+for(i in 1:length(boscar_data_list)){
+  dv_data$male.offender[i] <- as.numeric(as.character(boscar_data_list[[i]][11,3]))
+              
+  dv_data$female.offender[i] <- as.numeric(as.character(boscar_data_list[[i]][18,3]))
+}
+
+
+# inner and outer join census_geo_data with dv_data
+#all_data <- merge(census_geo_data, dv_data, by="lga_name", all=TRUE)
+all_data <-  merge(census_geo_data, dv_data, by="lga_name")
+
+write.csv(dv_data, file="./Data/dv_data.csv")
+write.csv(all_data, file="./Data/dv_data.csv")
+head(all_data, 20)
+
+```
+
+
+```{r descriptive analysis: domestic violence against man}
+#sum of all victims and offender by LGA
+all_data$all.victim <- all_data$male.victim + all_data$female.victim
+all_data$all.offender <- all_data$male.offender + all_data$female.offender
+all_data$male.victim.percentage <- all_data$male.victim/all_data$all.victim
+all_data$female.victim.percentage <- all_data$female.victim/all_data$all.victim
+
+grand_sum_male_victim <- sum(all_data$male.victim)
+grand_sum_female_victim <- sum(all_data$female.victim)
+grand_sum_male_offender <- sum(all_data$male.offender)
+grand_sum_female_offender <- sum(all_data$female.offender)
+grand_sum_all_victim <- sum(all_data$all.victim)
+grand_sum_all_offender <- sum(all_data$all.offender)
+grand_sum_male_victim_percentage <- grand_sum_male_victim/grand_sum_victim
+
+#LGA and Male Victim Percentage acsending by percentage
+lga_and_male_victim_percentage <- cbind(all_data$lga_name, all_data$male.victim.percentage, all_data$Tot_P_P)
+lga_and_male_victim_percentage <- lga_and_male_victim_percentage[order(all_data$male.victim.percentage),]
+lga_and_male_victim_percentage[all_data$Tot_P_P>mean(all_data$Tot_P_P),]
+
+head(census_data)
+
+sd(all_data$male.victim.percentage)
+scale(all_data$male.victim.percentage)
+
+
+#Density plot of male and female victim percentage
+temp <- melt(all_data, measure.vars=c("male.victim.percentage", "female.victim.percentage"))
+head(temp$variable)
+
+#TODO: Add aesthetic features ----------------------
+ggplot(temp, aes(x=value, color=variable)) + 
+  geom_density() +
+  geom_vline(aes(xintercept=mean(all_data$male.victim.percentage)),
+             color="red", linetype="dashed", size=1) +
+  geom_vline(aes(xintercept=mean(all_data$female.victim.percentage)),
+             color="blue", linetype="dashed", size=1)
+
+
+#simple plot of points
+# plot(all_data$male.victim.percentage,
+#      main="Male Victim Percentage in NSW, 2016",
+#      xlab="Index", 
+#      ylab = "Male Victim Percentage")
+# abline(mean(grand_sum_male_victim_percentage),0)
+
+
+#validation
+#(all_data$male.victim.percentage+all_data$female.victim.percentage, 100)
+
+
+```
+This shows that in New South Wales, the percentage of male being the victims of domestic violence is 31.80%, roughly in line with the "1/3" claim.
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
