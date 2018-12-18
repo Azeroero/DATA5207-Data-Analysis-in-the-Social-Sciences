@@ -19,7 +19,17 @@ library(ggplot2)
 library(reshape2)
 ```
 
-# Data Transformation
+# Data Extraction, Transformation and Load
+We need to extract the number of victims and offenders by gender from the BOSCAR dataset from URL...; 
+The dataset contains hundreds of xlxs excel tables.
+The dataset cotains information in 2016,
+so we also need to use the 2016 census data to have a near-match, especially for LGA almalgamation ... and validity of data ...
+- e.g Bankstown-Canturbury
+
+
+The 2016 census data can be downloaded from URL.
+After transformation, processed data are loaded (saved) in local storage for further usage.
+
 ```{r Data Transformation: 2016 Census Data}
 #load and combine Census data
 filenames <- dir(path = "./Data/NSW_LGA_2016/2016 Census GCP Local Government Areas for NSW", 
@@ -45,7 +55,7 @@ census_geo_data <- merge(
               by="Census_Code_2016")
 
 
-#remove "(A)", "(C)" in Census_Name_2016 and save into lga_name
+#remove "(A)", "(C)" in Census_Name_2016 and save into lga_name; A->Area C->City
 for(i in 1:length(census_geo_data$Census_Code_2016)){
   census_geo_data$lga_name[i] <- str_trim(str_extract(
     as.character(census_geo_data$Census_Name_2016[i]),"^[^\\(]*"))
@@ -125,11 +135,16 @@ all_data$all.victim <- all_data$male.victim + all_data$female.victim
 all_data$all.offender <- all_data$male.offender + all_data$female.offender
 all_data$male.victim.percentage <- all_data$male.victim/all_data$all.victim
 all_data$female.victim.percentage <- all_data$female.victim/all_data$all.victim
+all_data$male.offender.percentage <- all_data$male.offender/all_data$all.offender
+all_data$female.offender.percentage <- all_data$female.offender/all_data$all.offender
+
 
 grand_sum_male_victim <- sum(all_data$male.victim)
 grand_sum_female_victim <- sum(all_data$female.victim)
+
 grand_sum_male_offender <- sum(all_data$male.offender)
 grand_sum_female_offender <- sum(all_data$female.offender)
+
 grand_sum_all_victim <- sum(all_data$all.victim)
 grand_sum_all_offender <- sum(all_data$all.offender)
 grand_sum_male_victim_percentage <- grand_sum_male_victim/grand_sum_victim
@@ -139,23 +154,48 @@ lga_and_male_victim_percentage <- cbind(all_data$lga_name, all_data$male.victim.
 lga_and_male_victim_percentage <- lga_and_male_victim_percentage[order(all_data$male.victim.percentage),]
 lga_and_male_victim_percentage[all_data$Tot_P_P>mean(all_data$Tot_P_P),]
 
-head(census_data)
-
 sd(all_data$male.victim.percentage)
 scale(all_data$male.victim.percentage)
 
 
 #Density plot of male and female victim percentage
-temp <- melt(all_data, measure.vars=c("male.victim.percentage", "female.victim.percentage"))
-head(temp$variable)
+percentage_density_plot_melt <- 
+  melt(cbind(male.victim.percentage = all_data$male.victim.percentage,
+                   female.victim.percentage = all_data$female.victim.percentage),
+             measure.vars=c("male.victim.percentage", "female.victim.percentage")) %>%
+  rename("gender" = Var2)
+
 
 #TODO: Add aesthetic features ----------------------
-ggplot(temp, aes(x=value, color=variable)) + 
+ggplot(percentage_density_plot_melt, aes(x=value, color=gender)) + 
   geom_density() +
   geom_vline(aes(xintercept=mean(all_data$male.victim.percentage)),
              color="red", linetype="dashed", size=1) +
   geom_vline(aes(xintercept=mean(all_data$female.victim.percentage)),
              color="blue", linetype="dashed", size=1)
+
+
+
+#Density plot of numbers of male and female victims 
+density_plot_melt <- 
+  melt(cbind(male.victim = all_data$male.victim,
+             female.victim = all_data$female.victim,
+             all.victim = all_data$all.victim),
+             measure.vars=c("all.victim","male.victim", "female.victim")) %>%
+  rename("gender" = Var2)
+
+
+#TODO: Add aesthetic features ----------------------
+ggplot(density_plot_melt, aes(x=value, color=gender)) + 
+  geom_density() +
+    geom_vline(aes(xintercept=mean(all_data$all.victim)),
+             color="blue", linetype="dashed", size=1) +
+  geom_vline(aes(xintercept=mean(all_data$male.victim)),
+             color="red", linetype="dashed", size=1) +
+  geom_vline(aes(xintercept=mean(all_data$female.victim)),
+             color="green", linetype="dashed", size=1) +
+  xlim(0, 500)
+
 
 
 #simple plot of points
