@@ -1,2 +1,7 @@
 *.pdf
 *.docx
+*.tmp
+*.ipynb
+/Project/_Archive
+/Project/Data/BOSCAR_LGA
+/Project/Data/NSW_LGA_2016
